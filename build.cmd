@@ -16,7 +16,8 @@ echo Building %DIST_DIR%
 echo =======================================================
 
 :: 1. Configure CMake
-cmake -B build -A %ARCH% -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DOBJECT_LAYER_BITS=%OBJ_LAYER% -DDOUBLE_PRECISION=%DBL_PREC% -DUSE_ASSERTS=%ASSERTS% -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF
+:: -S src tells CMake to look for the CMakeLists.txt inside the 'src' folder
+cmake -S src -B build -A %ARCH% -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DOBJECT_LAYER_BITS=%OBJ_LAYER% -DDOUBLE_PRECISION=%DBL_PREC% -DUSE_ASSERTS=%ASSERTS% -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF
 if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
 
 :: 2. Build the project
@@ -27,8 +28,8 @@ if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
 if exist "%DIST_DIR%" rmdir /s /q "%DIST_DIR%"
 mkdir "%DIST_DIR%\include\JoltC"
 
-:: Copy C Headers
-xcopy /E /I /Y "JoltC\*" "%DIST_DIR%\include\JoltC\" >nul
+:: Copy C Headers (Now looking in src\JoltC)
+xcopy /E /I /Y "src\JoltC\*" "%DIST_DIR%\include\JoltC\" >nul
 
 :: Copy compiled libraries
 if exist "build\%BUILD_TYPE%" (
@@ -38,7 +39,7 @@ if exist "build\%BUILD_TYPE%" (
     copy "build\*.dll" "%DIST_DIR%\" >nul
 )
 
-:: 4. Zip the output using native Windows tar
+:: 4. Zip the output
 if exist "%DIST_DIR%.zip" del "%DIST_DIR%.zip"
 tar -a -c -f "%DIST_DIR%.zip" "%DIST_DIR%"
 

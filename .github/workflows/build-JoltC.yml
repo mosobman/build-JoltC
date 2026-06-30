@@ -1,4 +1,4 @@
-name: build-joltc
+name: build-JoltC
 
 on:
   schedule:
@@ -19,16 +19,18 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: checkout
+      - name: checkout JoltC
         uses: actions/checkout@v7
         with:
+          repository: SecondHalfGames/JoltC
           submodules: true
           fetch-depth: 0
 
       - name: evaluate changes and set outputs
         id: check
         run: |
-          LATEST_RELEASE=$(gh release view --json targetCommitish -q '.targetCommitish' 2>/dev/null || echo "none")
+          # Check the latest release in the SOURCE repo to see if we should build
+          LATEST_RELEASE=$(gh release view --json targetCommitish -R SecondHalfGames/JoltC -q '.targetCommitish' 2>/dev/null || echo "none")
           HEAD_COMMIT=$(git rev-parse HEAD)
           
           if [ "${{ github.event_name }}" == "schedule" ] && [ "$LATEST_RELEASE" == "$HEAD_COMMIT" ]; then
@@ -40,9 +42,9 @@ jobs:
           echo "OUTPUT_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
           echo "JOLTC_COMMIT=$HEAD_COMMIT" >> $GITHUB_OUTPUT
           
+          # Get JoltPhysics submodule commit
           cd JoltPhysics
           echo "JOLTPHYSICS_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-
   build:
     needs: check-changes
     if: needs.check-changes.outputs.SHOULD_RUN == 'true'
@@ -94,9 +96,14 @@ jobs:
             name_suffix: "Release-O-D"
 
     steps:
-      - name: checkout
+      - name: checkout this repo
+        uses: actions/checkout@v7
+      
+      - name: checkout JoltC Source
         uses: actions/checkout@v7
         with:
+          repository: SecondHalfGames/JoltC
+          path: src
           submodules: true
 
       - name: build
