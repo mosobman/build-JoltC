@@ -12,17 +12,25 @@ set OUT_DATE=%~7
 
 set DIST_DIR=JoltC-%ARCH%-%NAME_SUFFIX%-%OUT_DATE%
 echo =======================================================
-echo Building %DIST_DIR%
+echo Configuring %DIST_DIR%
 echo =======================================================
 
 :: 1. Configure CMake
 :: -S src tells CMake to look for the CMakeLists.txt inside the 'src' folder
-cmake -S src -B build -A %ARCH% -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DOBJECT_LAYER_BITS=%OBJ_LAYER% -DDOUBLE_PRECISION=%DBL_PREC% -DUSE_ASSERTS=%ASSERTS% -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF
+cmake -S src -B build -A %ARCH% -DOBJECT_LAYER_BITS=%OBJ_LAYER% -DDOUBLE_PRECISION=%DBL_PREC% -DUSE_ASSERTS=%ASSERTS% -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF
 if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
+
+echo =======================================================
+echo Building %DIST_DIR%
+echo =======================================================
 
 :: 2. Build the project
 cmake --build build --config %BUILD_TYPE%
 if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
+
+echo =======================================================
+echo Packaging %DIST_DIR%
+echo =======================================================
 
 :: 3. Package the artifacts
 if exist "%DIST_DIR%" rmdir /s /q "%DIST_DIR%"
@@ -38,6 +46,10 @@ if exist "build\%BUILD_TYPE%" (
     copy "build\*.lib" "%DIST_DIR%\" >nul
     copy "build\*.dll" "%DIST_DIR%\" >nul
 )
+
+echo =======================================================
+echo Zipping %DIST_DIR%
+echo =======================================================
 
 :: 4. Zip the output
 if exist "%DIST_DIR%.zip" del "%DIST_DIR%.zip"

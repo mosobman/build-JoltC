@@ -1,3 +1,5 @@
+[![build-JoltC](https://github.com/mosobman/build-JoltC/actions/workflows/build-JoltC.yml/badge.svg)](https://github.com/mosobman/build-JoltC/actions/workflows/build-JoltC.yml)
+
 Automatic weekly build of [JoltC][] for 64-bit Windows (x64 only, not arm64 yet).
 
 Build produces shared libraries (.dll files) that are linked statically to their dependencies.
