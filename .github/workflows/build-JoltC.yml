@@ -113,7 +113,11 @@ jobs:
           echo "[Jolt commit](https://github.com/jrouwe/JoltPhysics/commit/${{ needs.check-changes.outputs.JOLTPHYSICS_COMMIT }})" >> notes.txt
 
       - name: create release
-        run: gh release create ${{ needs.check-changes.outputs.OUTPUT_DATE }} -R "${GITHUB_REPOSITORY}" -t '${{ needs.check-changes.outputs.OUTPUT_DATE }}' -F notes.txt --clobber
+        run: |
+          # Cleanup previous release if it exists
+          gh release delete "${{ needs.check-changes.outputs.OUTPUT_DATE }}" -y --cleanup-tag -R "${GITHUB_REPOSITORY}" || true
+          
+          gh release create ${{ needs.check-changes.outputs.OUTPUT_DATE }} -R "${GITHUB_REPOSITORY}" -t '${{ needs.check-changes.outputs.OUTPUT_DATE }}' -F notes.txt
 
       - name: get artifacts
         uses: actions/download-artifact@v8
