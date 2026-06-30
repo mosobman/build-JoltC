@@ -124,6 +124,7 @@ jobs:
         with:
           pattern: JoltC-*
           merge-multiple: true
+          skip-decompress: true
           path: all-artifacts
       
       - name: Verify artifacts exist
