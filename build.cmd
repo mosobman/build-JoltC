@@ -10,6 +10,13 @@ set ASSERTS=%~5
 set NAME_SUFFIX=%~6
 set OUT_DATE=%~7
 
+:: Default empty flags
+set LINK_FLAGS=
+:: Only apply LTCG for Release builds
+if /I "%BUILD_TYPE%"=="Release" (
+    set LINK_FLAGS=/LTCG
+)
+
 set DIST_DIR=JoltC-%ARCH%-%NAME_SUFFIX%-%OUT_DATE%
 echo =======================================================
 echo Configuring %DIST_DIR%
@@ -17,7 +24,7 @@ echo =======================================================
 
 :: 1. Configure CMake
 :: -S src tells CMake to look for the CMakeLists.txt inside the 'src' folder
-cmake -S src -B build -A %ARCH% -DOBJECT_LAYER_BITS=%OBJ_LAYER% -DDOUBLE_PRECISION=%DBL_PREC% -DUSE_ASSERTS=%ASSERTS% -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF -DCMAKE_CXX_FLAGS="/Zc:enumTypes /wd4865" -DCMAKE_EXE_LINKER_FLAGS="/LTCG" -DCMAKE_SHARED_LINKER_FLAGS="/LTCG" -DCMAKE_STATIC_LINKER_FLAGS="/LTCG"
+cmake -S src -B build -A %ARCH% -DOBJECT_LAYER_BITS=%OBJ_LAYER% -DDOUBLE_PRECISION=%DBL_PREC% -DUSE_ASSERTS=%ASSERTS% -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF -DCMAKE_CXX_FLAGS="/Zc:enumTypes /wd4865" -DCMAKE_EXE_LINKER_FLAGS="%LINK_FLAGS%" -DCMAKE_SHARED_LINKER_FLAGS="%LINK_FLAGS%" -DCMAKE_STATIC_LINKER_FLAGS="%LINK_FLAGS%"
 if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
 
 echo =======================================================
@@ -25,7 +32,7 @@ echo Building %DIST_DIR%
 echo =======================================================
 
 :: 2. Build the project
-cmake --build build --config %BUILD_TYPE%
+cmake --build build --config %BUILD_TYPE% --target joltc
 if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
 
 echo =======================================================
