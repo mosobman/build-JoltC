@@ -142,9 +142,22 @@ jobs:
         with:
           pattern: JoltC-*
           merge-multiple: true
+          path: all-artifacts
+      
+      - name: Verify artifacts exist
+        run: ls -R all-artifacts/
 
       - name: upload artifacts
+        shell: bash
         run: |
-          for file in *.zip; do
+          # Verify files exist before looping
+          shopt -s nullglob
+          files=(all-artifacts/*.zip)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "Error: No zip files found in all-artifacts/"
+            exit 1
+          fi
+          
+          for file in "${files[@]}"; do
             gh release upload "${{ needs.check-changes.outputs.OUTPUT_DATE }}" "$file" -R "${GITHUB_REPOSITORY}"
           done
