@@ -17,7 +17,7 @@ echo =======================================================
 
 :: 1. Configure CMake
 :: -S src tells CMake to look for the CMakeLists.txt inside the 'src' folder
-cmake -S src -B build -A %ARCH% -DOBJECT_LAYER_BITS=%OBJ_LAYER% -DDOUBLE_PRECISION=%DBL_PREC% -DUSE_ASSERTS=%ASSERTS% -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF
+cmake -S src -B build -A %ARCH% -DOBJECT_LAYER_BITS=%OBJ_LAYER% -DDOUBLE_PRECISION=%DBL_PREC% -DUSE_ASSERTS=%ASSERTS% -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF -DCMAKE_CXX_FLAGS="/Zc:enumTypes /wd4865"
 if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
 
 echo =======================================================
