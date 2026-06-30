@@ -1,0 +1,142 @@
+name: build-joltc
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      SHOULD_RUN:         ${{ steps.check.outputs.SHOULD_RUN }}
+      OUTPUT_DATE:        ${{ steps.check.outputs.OUTPUT_DATE }}
+      JOLTC_COMMIT:       ${{ steps.check.outputs.JOLTC_COMMIT }}
+      JOLTPHYSICS_COMMIT: ${{ steps.check.outputs.JOLTPHYSICS_COMMIT }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: evaluate changes and set outputs
+        id: check
+        run: |
+          LATEST_RELEASE=$(gh release view --json targetCommitish -q '.targetCommitish' 2>/dev/null || echo "none")
+          HEAD_COMMIT=$(git rev-parse HEAD)
+          
+          if [ "${{ github.event_name }}" == "schedule" ] && [ "$LATEST_RELEASE" == "$HEAD_COMMIT" ]; then
+            echo "SHOULD_RUN=false" >> $GITHUB_OUTPUT
+          else
+            echo "SHOULD_RUN=true" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "OUTPUT_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          echo "JOLTC_COMMIT=$HEAD_COMMIT" >> $GITHUB_OUTPUT
+          
+          cd JoltPhysics
+          echo "JOLTPHYSICS_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+  build:
+    needs: check-changes
+    if: needs.check-changes.outputs.SHOULD_RUN == 'true'
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64] 
+        include:
+          - build_type: "Debug"
+            obj_layer: 16
+            dbl_prec: "OFF"
+            use_asserts: "ON"
+            name_suffix: "Debug-X-X"
+          - build_type: "Debug"
+            obj_layer: 32
+            dbl_prec: "OFF"
+            use_asserts: "ON"
+            name_suffix: "Debug-O-X"
+          - build_type: "Debug"
+            obj_layer: 16
+            dbl_prec: "ON"
+            use_asserts: "ON"
+            name_suffix: "Debug-X-D"
+          - build_type: "Debug"
+            obj_layer: 32
+            dbl_prec: "ON"
+            use_asserts: "ON"
+            name_suffix: "Debug-O-D"
+          - build_type: "Release"
+            obj_layer: 16
+            dbl_prec: "OFF"
+            use_asserts: "OFF"
+            name_suffix: "Release-X-X"
+          - build_type: "Release"
+            obj_layer: 32
+            dbl_prec: "OFF"
+            use_asserts: "OFF"
+            name_suffix: "Release-O-X"
+          - build_type: "Release"
+            obj_layer: 16
+            dbl_prec: "ON"
+            use_asserts: "OFF"
+            name_suffix: "Release-X-D"
+          - build_type: "Release"
+            obj_layer: 32
+            dbl_prec: "ON"
+            use_asserts: "OFF"
+            name_suffix: "Release-O-D"
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: build
+        id: build
+        shell: cmd
+        run: call build.cmd ${{ matrix.arch }} ${{ matrix.build_type }} ${{ matrix.obj_layer }} ${{ matrix.dbl_prec }} ${{ matrix.use_asserts }} ${{ matrix.name_suffix }} ${{ needs.check-changes.outputs.OUTPUT_DATE }}
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: JoltC-${{ matrix.arch }}-${{ matrix.name_suffix }}-${{ needs.check-changes.outputs.OUTPUT_DATE }}
+          path: JoltC-${{ matrix.arch }}-${{ matrix.name_suffix }}-${{ needs.check-changes.outputs.OUTPUT_DATE }}.zip
+          if-no-files-found: error
+          archive: false
+
+  release:
+    runs-on: ubuntu-24.04
+    needs: [check-changes, build]
+    if: needs.check-changes.outputs.SHOULD_RUN == 'true'
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: generate release notes
+        run: |
+          echo "[JoltC commit](https://github.com/SecondHalfGames/JoltC/commit/${{ needs.check-changes.outputs.JOLTC_COMMIT }})" > notes.txt
+          echo "[Jolt commit](https://github.com/jrouwe/JoltPhysics/commit/${{ needs.check-changes.outputs.JOLTPHYSICS_COMMIT }})" >> notes.txt
+
+      - name: create release
+        run: gh release create ${{ needs.check-changes.outputs.OUTPUT_DATE }} -R "${GITHUB_REPOSITORY}" -t '${{ needs.check-changes.outputs.OUTPUT_DATE }}' -F notes.txt
+
+      - name: get artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: JoltC-*
+          merge-multiple: true
+
+      - name: upload artifacts
+        run: |
+          for file in *.zip; do
+            gh release upload "${{ needs.check-changes.outputs.OUTPUT_DATE }}" "$file" -R "${GITHUB_REPOSITORY}"
+          done
