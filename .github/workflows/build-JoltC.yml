@@ -30,20 +30,31 @@ jobs:
       - name: evaluate changes and set outputs
         id: check
         run: |
-          # Check the latest release in the SOURCE repo to see if we should build
-          LATEST_RELEASE=$(gh release view --json targetCommitish -R SecondHalfGames/JoltC -q '.targetCommitish' 2>/dev/null || echo "none")
-          HEAD_COMMIT=$(git rev-parse HEAD)
+          # 1. Get the current commit of the JoltC submodule
+          CURRENT_SUBMODULE_COMMIT=$(cd JoltC && git rev-parse HEAD)
           
-          if [ "${{ github.event_name }}" == "schedule" ] && [ "$LATEST_RELEASE" == "$HEAD_COMMIT" ]; then
+          # 2. Get the body of the LATEST release
+          LATEST_RELEASE_BODY=$(gh release view --json body -q '.body' 2>/dev/null || echo "")
+          
+          # 3. Extract the hash from the notes
+          # Look for the commit URL and extract the 40-character hex string
+          LATEST_RELEASE_COMMIT=$(echo "$LATEST_RELEASE_BODY" | grep -oE 'commit/[0-9a-f]{40}' | head -n 1 | cut -d'/' -f2 || echo "none")
+          
+          echo "Current Submodule: $CURRENT_SUBMODULE_COMMIT"
+          echo "Last Release Notes Hash: $LATEST_RELEASE_COMMIT"
+          
+          # 4. Logic: Skip if matches, run if no match/no release
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] && [ "$CURRENT_SUBMODULE_COMMIT" == "$LATEST_RELEASE_COMMIT" ]; then
             echo "SHOULD_RUN=false" >> $GITHUB_OUTPUT
+            echo "::notice::No changes detected in JoltC submodule. Skipping build."
           else
             echo "SHOULD_RUN=true" >> $GITHUB_OUTPUT
           fi
           
           echo "OUTPUT_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-          echo "JOLTC_COMMIT=$HEAD_COMMIT" >> $GITHUB_OUTPUT
+          echo "JOLTC_COMMIT=$CURRENT_SUBMODULE_COMMIT" >> $GITHUB_OUTPUT
           
-          # Get JoltPhysics submodule commit
+          # Get JoltPhysics submodule commit (for release notes)
           cd JoltPhysics
           echo "JOLTPHYSICS_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
   build:
@@ -53,48 +64,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [x64] 
         include:
-          - build_type: "Debug"
-            obj_layer: 16
-            dbl_prec: "OFF"
-            use_asserts: "ON"
-            name_suffix: "Debug-X-X"
-          - build_type: "Debug"
-            obj_layer: 32
-            dbl_prec: "OFF"
-            use_asserts: "ON"
-            name_suffix: "Debug-O-X"
-          - build_type: "Debug"
-            obj_layer: 16
-            dbl_prec: "ON"
-            use_asserts: "ON"
-            name_suffix: "Debug-X-D"
-          - build_type: "Debug"
-            obj_layer: 32
-            dbl_prec: "ON"
-            use_asserts: "ON"
-            name_suffix: "Debug-O-D"
-          - build_type: "Release"
-            obj_layer: 16
-            dbl_prec: "OFF"
-            use_asserts: "OFF"
-            name_suffix: "Release-X-X"
-          - build_type: "Release"
-            obj_layer: 32
-            dbl_prec: "OFF"
-            use_asserts: "OFF"
-            name_suffix: "Release-O-X"
-          - build_type: "Release"
-            obj_layer: 16
-            dbl_prec: "ON"
-            use_asserts: "OFF"
-            name_suffix: "Release-X-D"
-          - build_type: "Release"
-            obj_layer: 32
-            dbl_prec: "ON"
-            use_asserts: "OFF"
-            name_suffix: "Release-O-D"
+          - { arch: x64, build_type: "Debug", obj_layer: 16, dbl_prec: "OFF", use_asserts: "ON", name_suffix: "Debug-X-X" }
+          - { arch: x64, build_type: "Debug", obj_layer: 32, dbl_prec: "OFF", use_asserts: "ON", name_suffix: "Debug-O-X" }
+          - { arch: x64, build_type: "Debug", obj_layer: 16, dbl_prec: "ON", use_asserts: "ON", name_suffix: "Debug-X-D" }
+          - { arch: x64, build_type: "Debug", obj_layer: 32, dbl_prec: "ON", use_asserts: "ON", name_suffix: "Debug-O-D" }
+          - { arch: x64, build_type: "Release", obj_layer: 16, dbl_prec: "OFF", use_asserts: "OFF", name_suffix: "Release-X-X" }
+          - { arch: x64, build_type: "Release", obj_layer: 32, dbl_prec: "OFF", use_asserts: "OFF", name_suffix: "Release-O-X" }
+          - { arch: x64, build_type: "Release", obj_layer: 16, dbl_prec: "ON", use_asserts: "OFF", name_suffix: "Release-X-D" }
+          - { arch: x64, build_type: "Release", obj_layer: 32, dbl_prec: "ON", use_asserts: "OFF", name_suffix: "Release-O-D" }
 
     steps:
       - name: checkout this repo
@@ -135,7 +113,7 @@ jobs:
           echo "[Jolt commit](https://github.com/jrouwe/JoltPhysics/commit/${{ needs.check-changes.outputs.JOLTPHYSICS_COMMIT }})" >> notes.txt
 
       - name: create release
-        run: gh release create ${{ needs.check-changes.outputs.OUTPUT_DATE }} -R "${GITHUB_REPOSITORY}" -t '${{ needs.check-changes.outputs.OUTPUT_DATE }}' -F notes.txt
+        run: gh release create ${{ needs.check-changes.outputs.OUTPUT_DATE }} -R "${GITHUB_REPOSITORY}" -t '${{ needs.check-changes.outputs.OUTPUT_DATE }}' -F notes.txt --clobber
 
       - name: get artifacts
         uses: actions/download-artifact@v8
