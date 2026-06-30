@@ -24,7 +24,7 @@ echo =======================================================
 
 :: 1. Configure CMake
 :: -S src tells CMake to look for the CMakeLists.txt inside the 'src' folder
-cmake -S src -B build -A %ARCH% -DOBJECT_LAYER_BITS=%OBJ_LAYER% -DDOUBLE_PRECISION=%DBL_PREC% -DUSE_ASSERTS=%ASSERTS% -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF -DCMAKE_CXX_FLAGS="/Zc:enumTypes /wd4865" -DCMAKE_EXE_LINKER_FLAGS="%LINK_FLAGS%" -DCMAKE_SHARED_LINKER_FLAGS="%LINK_FLAGS%" -DCMAKE_STATIC_LINKER_FLAGS="%LINK_FLAGS%"
+cmake -S src -B build -A %ARCH% -DOBJECT_LAYER_BITS=%OBJ_LAYER% -DDOUBLE_PRECISION=%DBL_PREC% -DUSE_ASSERTS=%ASSERTS% -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=ON -DCMAKE_CXX_FLAGS="/Zc:enumTypes /wd4865" -DCMAKE_EXE_LINKER_FLAGS="%LINK_FLAGS%" -DCMAKE_SHARED_LINKER_FLAGS="%LINK_FLAGS%" -DCMAKE_STATIC_LINKER_FLAGS="%LINK_FLAGS%"
 if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
 
 echo =======================================================

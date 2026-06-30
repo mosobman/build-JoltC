@@ -2,7 +2,7 @@
 
 Automatic weekly build of [JoltC][] for 64-bit Windows (x64 only, not arm64 yet).
 
-Build produces shared libraries (.dll files) that are linked statically to their dependencies.
+Build produces static libraries (.lib files) that are linked statically to their dependencies.
 
 Download binary build as zip archive from [latest release][] page.
 
